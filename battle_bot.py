@@ -28,10 +28,11 @@ def load_env():
         'tgbotapi': os.environ.get('TELEGRAM_BOT_TOKEN'),
         'chatid': os.environ.get('TELEGRAM_CHAT_ID'),
         'phone': os.environ.get('CHORCHA_PHONE'),
-        'password': os.environ.get('CHORCHA_PASS')
+        'password': os.environ.get('CHORCHA_PASS'),
+        'chorcha_name': os.environ.get('CHORCHA_NAME')
     }
     # Fallback to .env file if not present in env
-    if not env['tgbotapi'] or not env['chatid'] or not env['phone'] or not env['password']:
+    if not env['tgbotapi'] or not env['chatid'] or not env['phone'] or not env['password'] or not env['chorcha_name']:
         try:
             if os.path.exists('.env'):
                 with open('.env', 'r', encoding='utf-8') as f:
@@ -55,6 +56,14 @@ def load_env():
                             env['password'] = line[len('password:'):].strip()
                         elif line.startswith('password='):
                             env['password'] = line[len('password='):].strip()
+                        elif line.startswith('chorcha_name:'):
+                            env['chorcha_name'] = line[len('chorcha_name:'):].strip()
+                        elif line.startswith('chorcha_name='):
+                            env['chorcha_name'] = line[len('chorcha_name='):].strip()
+                        elif line.startswith('CHORCHA_NAME:'):
+                            env['chorcha_name'] = line[len('CHORCHA_NAME:'):].strip()
+                        elif line.startswith('CHORCHA_NAME='):
+                            env['chorcha_name'] = line[len('CHORCHA_NAME='):].strip()
         except Exception as e:
             print(f"[-] Warning: Failed to load .env: {e}")
     return env
@@ -66,8 +75,10 @@ def send_telegram_report(env, topic_name, battle_url, answered_count, total_ques
         print("[-] Telegram credentials missing in .env. Skipping report.")
         return
     
+    chorcha_name = env.get('chorcha_name') or 'N/A'
     caption = (
         f"🏆 *Chorcha Battle Report* 🏆\n\n"
+        f"👤 *AC:* {chorcha_name}\n"
         f"📖 *Topic:* {topic_name}\n"
         f"🔗 [Battle URL]({battle_url})\n"
         f"✅ *Questions Answered:* {answered_count}/{total_questions}\n\n"
@@ -360,7 +371,7 @@ def create_battle_rooms(session, count):
                 print(f"    [-] room_id not found in response: {res.text}")
                 continue
 
-            battle_url = f"https://chorcha.net/battle/{room_id}?topic={urllib.parse.quote(topic_name)}"
+            battle_url = f"https://chorcha.net/battle/{room_id}?topic={urllib.parse.quote(topic_name)}&druto_id={druto_id}"
             print(f"    [+] Created battle room: {battle_url}")
             urls.append(battle_url)
             
@@ -420,7 +431,7 @@ async def play_battle(context, url_idx, url, session):
     print(f"========================================")
     
     # Extract druto_id
-    match = re.search(r'BATTLE_[a-zA-Z0-9_\-]{16}', url)
+    match = re.search(r'BATTLE_[a-zA-Z0-9_\-]+', url)
     if not match:
         print(f"[-] [{url_idx}] Could not extract druto_id from URL. Skipping.")
         return
